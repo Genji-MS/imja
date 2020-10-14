@@ -1,5 +1,6 @@
 from hashlib import sha512
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
+import sys
 import re
 
 filename = ""
@@ -41,6 +42,44 @@ def Pattern(hashedWords):
         pattern.append( (R, G, B) )
         #print(f'i:{i} j:{j} k:{k} 0x:{Ox} 0xR:{OxR} 0xG:{OxG} 0xB:{OxB} R:{R} G:{G} B:{B}')
     return pattern
+
+def DrawText(text):
+    input_image = Image.open(f'./image/{filename}.png')
+    text_image = Image.new('L', input_image.size, color = (0))
+
+    x_size, y_size = input_image.size
+    #print(x_size, y_size)
+    '''
+    each character is appx 
+    7 pixels in length. as 62 char in an image width of 435 fit perfectly.
+    13 pixels in height. as 20 lines in an image height of 276 fit perfectly.
+    '''
+    #constants to calculate number of characters that will fit within the image, and where line breaks will be inserted
+    _N = int(x_size/7) #characters before new line is inserted
+    _E = int(y_size/13) #vertical limit of characters
+    text_length = len(text)
+    if (_N*_E) < text_length:
+        sys.exit(f'The message({text_length}) is too long to fit within the image({_N*_E})')
+    text_lines = 0 #vertical lines of text
+    while text_length - _N*text_lines > _N:
+        #increment text_lines aka lines of vertical text
+        text_lines+=1
+        #calculate where we insert the linebreak (max_characters_per_line * lines + #_of_line_breaks(invisible characters that add to the index length))
+        newLine_index = _N*text_lines+(1*(text_lines-1))
+        #add line break by making a new string
+        add_line = text[:newLine_index]+'\n'+text[newLine_index:]
+        #strings are immutable in Python, so we re-write the new text back into our variable
+        text = add_line
+        #recalculate the length of our text MINUS 2 characters that denote each new line
+        text_length = len(text)-(text_lines*2)
+        #12345678901234567890
+        #1 3 5 7 90 2 4 6 8 0
+
+    text_font = ImageFont.truetype('/Library/Fonts/Courier.dfont', 12)
+    text_draw = ImageDraw.Draw(text_image)
+    text_draw.text((0,0), text, font=text_font, fill=(255))
+    
+    text_image.save(f'./text/{filename}.png')
 
 def Encode():
     index = 0 #32
@@ -145,11 +184,15 @@ if __name__ == "__main__":
     #words = input(f'Enter code word:')
     words = 'twelve'
 
+    text = input(f'Enter text message:')
+
     filename = hashedWords = HashWord(words.encode())
     #print(hashedWords) #32 hex digits 64characters
 
     Pattern(hashedWords)
     #print(pattern)
+
+    DrawText(text)
 
     Encode()
     Decode()
