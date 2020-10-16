@@ -1,19 +1,71 @@
-from hashlib import sha512
+from flask import Flask, render_template, request, redirect, url_for
 from PIL import Image, ImageDraw, ImageFont
-import time
+from base64 import b64encode
+from hashlib import sha512
+#import time
 import sys
 import re
+import io
 
+app = Flask(__name__)
+#perhaps not needed if avoiding file saves
 filename = ""
+#hashed pattern for encoding
 pattern = []
-#83e331c3b883b3fb6904bd12b9cfbaa68f9f1d3e9675cbc0cefd0a008867dfc403331a5548313ee19691eaa1d0e2ee8e8168caf4d507a62a150771f73654e68f
+#is either 
+#input_image = Image
+#only needed when incoding
+#text_image = Image
+#either encoded or decoded image
+#output_image = Image
+
+@app.route('/')
+def index():
+    """ website form """
+    # TODO: add optional error message
+    # TODO: random password generator from brute force library
+
+    return render_template('index.html')
+
+@app.route('/imja', methods=['POST'])
+def imja():
+    codetype = request.form.get('codetype')
+    password = request.form.get('password')
+    message = request.form.get('message')
+    image = request.files['image']
+    #print(f'type:{codetype} pw:{password} msg:{message} img:{image}')
+    # TODO: Error checking, will message fit! else reload '/' with optional error msg
+    
+    #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
+
+    #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
+    Pattern(HashWord(password.encode()))
+    #filename = str(int(time.time())) + hashedWords[:1]
+    #print(filename)
+
+    if codetype == "Encode":
+        t_image = DrawText(image, message)
+        o_image = Encode(image, t_image)
+    elif codetype == "Decode":
+        o_image = Decode(image)
+    else:
+        #TODO add error message
+        return redirect(url_for('index'))
+
+    img_byte_arr = io.BytesIO()
+    o_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+
+    encoded = b64encode(img_byte_arr)
+    mime = "image/png"
+    uri = "data:%s;base64,%s" % (mime, encoded)
+
+    return render_template('image.html', uri= uri)
+    #return redirect(url_for('index')) #or rather, redirect to the image
 
 def HashWord(words):
     hashedWords = sha512(words).hexdigest()
     return(hashedWords)
-
-def Hex2Int(HeX):
-    return int(HeX,16)
 
 def Pattern(hashedWords):
     ints = []
@@ -29,36 +81,36 @@ def Pattern(hashedWords):
         k = i + j
         Ox = bin(k)
 
-        R = k >> 6
-        G = (k & 56) >> 3
-        B = (k & 7)
-        #break hex into individual channels visually as 'binary strings' *NOT FOR ACTUAL USE*
+        #break hex into individual channels
         # while len(Ox) < 11:
         #     temp = Ox[:2]+"0"+Ox[2:]
         #     Ox = temp
         # OxR = Ox[2:5]
         # OxG = Ox[5:8]
         # OxB = Ox[8:]
-        # pattern.append((OxR, OxG, OxB))
+        R = k >> 6
+        G = (k & 56) >> 3
+        B = (k & 7)
         pattern.append( (R, G, B) )
         #print(f'i:{i} j:{j} k:{k} 0x:{Ox} 0xR:{OxR} 0xG:{OxG} 0xB:{OxB} R:{R} G:{G} B:{B}')
-    return pattern
+    #return pattern #global variable
 
-def DrawText(text):
-    input_image = Image.open(f'./image/{filename}.png')
+def DrawText(image, message):
+    input_image = Image.open(image)
     text_image = Image.new('L', input_image.size, color = (0))
 
     x_size, y_size = input_image.size
     #print(x_size, y_size)
+    #print(pattern) #testing if we can see the pattern
     '''
-    each character is appx 
+    each character is appx:
     7 pixels in length. as 62 char in an image width of 435 fit perfectly.
-    13 pixels in height. as 20 lines in an image height of 276 fit perfectly.
+    13 pixels in height. as 20 lines in an image height of 276 fit perfectly with no black space following.
     '''
     #constants to calculate number of characters that will fit within the image, and where line breaks will be inserted
     _N = int(x_size/7) #characters before new line is inserted
     _E = int(y_size/13) #vertical limit of characters
-    text_length = len(text)
+    text_length = len(message)
     if (_N*_E) < text_length:
         sys.exit(f'The message({text_length}) is too long to fit within the image({_N*_E})')
     text_lines = 0 #vertical lines of text
@@ -68,24 +120,25 @@ def DrawText(text):
         #calculate where we insert the linebreak (max_characters_per_line * lines + #_of_line_breaks(invisible characters that add to the index length))
         newLine_index = _N*text_lines+(1*(text_lines-1))
         #add line break by making a new string
-        add_line = text[:newLine_index]+'\n'+text[newLine_index:]
+        add_line = message[:newLine_index]+'\n'+message[newLine_index:]
         #strings are immutable in Python, so we re-write the new text back into our variable
-        text = add_line
+        message = add_line
         #recalculate the length of our text MINUS 2 characters that denote each new line
-        text_length = len(text)-(text_lines*2)
+        text_length = len(message)-(text_lines*2)
         #12345678901234567890
         #1 3 5 7 90 2 4 6 8 0
 
     text_font = ImageFont.truetype('/Library/Fonts/Courier.dfont', 12)
     text_draw = ImageDraw.Draw(text_image)
-    text_draw.text((0,0), text, font=text_font, fill=(255))
+    text_draw.text((0,0), message, font=text_font, fill=(255))
     
-    text_image.save(f'./text/{filename}.png')
+    #text_image.save(f'./text/{filename}.png')
+    return text_image
 
-def Encode():
+def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0 #32
-    input_image = Image.open(f'./image/{filename}.png')
-    text_image = Image.open(f'./text/{filename}.png')
+    input_image = Image.open(image)
+    text_image = t_image #Image.open(f'./text/{filename}.png')
 
     # Create a new PIL image with the same size as the encoded image:
     output_image = Image.new("RGB", input_image.size)
@@ -104,7 +157,8 @@ def Encode():
 
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
-        (b,g,r) = pixel
+        #print (pixel)
+        (b,g,r,a) = pixel
         #center text into image with offset
         if pixelX >= x_offset and pixelX < (tx_size + x_offset) and pixelY >= y_offset and pixelY < (ty_size+y_offset):
             #get colors of text
@@ -143,14 +197,15 @@ def Encode():
         if index >= 32:
             index = 0
     
-    output_image.save(f'./output/{filename}.png')
-
     #option to black empty spaces, How to determine empty text area? or dont touch... Grey color in encode.
     #> optionaly check for grey, depends on encoding
 
-def Decode():
+    #output_image.save(f'./output/{filename}.png')
+    return output_image
+
+def Decode(image):
     index = 0
-    input_image = Image.open(f'./output/{filename}.png')
+    input_image = Image.open(image)
 
     # Create a new PIL image with the same size as the encoded image:
     decoded_image = Image.new("RGB", input_image.size)
@@ -163,7 +218,7 @@ def Decode():
 
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
-        (b,g,r) = pixel
+        (b,g,r,a) = pixel
         #Check if our color (Big Masked) matches the indexed pattern
         '''
         value 7 masks the 3 least sig bits to compare to our pattern (0 - 7)
@@ -176,24 +231,8 @@ def Decode():
         if index >= 32:
             index = 0
     
-    decoded_image.save(f'./decode/{filename}.png')
+    #decoded_image.save(f'./decode/{filename}.png')
+    return decoded_image
 
-if __name__ == "__main__":
-    #test image uses 'twelve'
-    words = input(f'Enter code word:')
-    #words = 'twelve'
-
-    text = input(f'Enter text message:')
-
-    hashedWords = HashWord(words.encode())
-    filename = str(int(time.time())) + hashedWords[:1]
-    print(filename)
-    #print(hashedWords) #32 hex digits 64characters
-
-    Pattern(hashedWords)
-    #print(pattern)
-
-    DrawText(text)
-
-    Encode()
-    Decode()
+if __name__ == '__main__':
+    app.run(debug=True)
