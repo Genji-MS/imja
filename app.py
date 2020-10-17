@@ -2,66 +2,79 @@ from flask import Flask, render_template, request, redirect, url_for
 from PIL import Image, ImageDraw, ImageFont
 from base64 import b64encode
 from hashlib import sha512
-#import time
-import sys
+from io import BytesIO
 import re
-import io
 
 app = Flask(__name__)
-#perhaps not needed if avoiding file saves
-filename = ""
-#hashed pattern for encoding
-pattern = []
-#is either 
-#input_image = Image
-#only needed when incoding
-#text_image = Image
-#either encoded or decoded image
-#output_image = Image
+pattern = [] #hashed pattern for encoding
 
 @app.route('/')
-def index():
-    """ website form """
-    # TODO: add optional error message
+def index_encode(uri = "/static/Imja.png", msg = ""):
     # TODO: random password generator from brute force library
+    return render_template('encode.html', uri=uri, msg=msg)
 
-    return render_template('index.html')
+@app.route('/imja')
+def index_decode(uri = "/static/Imja.png", msg = ""):
+    return render_template('decode.html', uri=uri, msg=msg)
 
-@app.route('/imja', methods=['POST'])
-def imja():
-    codetype = request.form.get('codetype')
+@app.route('/encode', methods=['POST'])
+def image_encode():
+    msg = ""
     password = request.form.get('password')
+    if password == "":
+        msg += f'  WARNING! No password provided.'
     message = request.form.get('message')
-    image = request.files['image']
-    #print(f'type:{codetype} pw:{password} msg:{message} img:{image}')
-    # TODO: Error checking, will message fit! else reload '/' with optional error msg
+    if message == "" or message == None:
+        msg += f'  ATTENTION! No message written!'
+    image = request.files['image']    
     
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
     #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
     Pattern(HashWord(password.encode()))
-    #filename = str(int(time.time())) + hashedWords[:1]
-    #print(filename)
+    t_image, error = DrawText(image, message)
+    #append to the error messages
+    msg += error
+    o_image = Encode(image, t_image)
 
-    if codetype == "Encode":
-        t_image = DrawText(image, message)
-        o_image = Encode(image, t_image)
-    elif codetype == "Decode":
-        o_image = Decode(image)
-    else:
-        #TODO add error message
-        return redirect(url_for('index'))
-
-    img_byte_arr = io.BytesIO()
+    img_byte_arr = BytesIO()
     o_image.save(img_byte_arr, format='PNG')
-    img_byte_arr = img_byte_arr.getvalue()
+    img_byte_arr = b64encode(img_byte_arr.getvalue())
 
-    encoded = b64encode(img_byte_arr)
+    img_string = str(img_byte_arr)
+    regex = r"(b')|(')"
+    subst = ""
+    img_string = re.sub(regex, subst, img_string, 0)
+
     mime = "image/png"
-    uri = "data:%s;base64,%s" % (mime, encoded)
+    uri = f'data:{mime};base64,{img_string}'
 
-    return render_template('image.html', uri= uri)
-    #return redirect(url_for('index')) #or rather, redirect to the image
+    return render_template('encode.html', uri= uri, msg=msg)
+
+@app.route('/decode', methods=['POST'])
+def image_decode():
+    password = request.form.get('password')
+    image = request.files['image']
+    
+    #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
+
+    #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
+    Pattern(HashWord(password.encode()))
+    o_image = Decode(image)
+
+    img_byte_arr = BytesIO()
+    o_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = b64encode(img_byte_arr.getvalue())
+
+    img_string = str(img_byte_arr)
+    regex = r"(b')|(')"
+    subst = ""
+    img_string = re.sub(regex, subst, img_string, 0)
+
+    mime = "image/png"
+    uri = f'data:{mime};base64,{img_string}'
+
+    return render_template('decode.html', uri= uri, msg=msg)
 
 def HashWord(words):
     hashedWords = sha512(words).hexdigest()
@@ -100,8 +113,7 @@ def DrawText(image, message):
     text_image = Image.new('L', input_image.size, color = (0))
 
     x_size, y_size = input_image.size
-    #print(x_size, y_size)
-    #print(pattern) #testing if we can see the pattern
+
     '''
     each character is appx:
     7 pixels in length. as 62 char in an image width of 435 fit perfectly.
@@ -111,8 +123,9 @@ def DrawText(image, message):
     _N = int(x_size/7) #characters before new line is inserted
     _E = int(y_size/13) #vertical limit of characters
     text_length = len(message)
+    msg = ""
     if (_N*_E) < text_length:
-        sys.exit(f'The message({text_length}) is too long to fit within the image({_N*_E})')
+        msg =f'  ALERT!!! The message({text_length}) was too long to fit within the image area({_N*_E}). Use a bigger image, or a smaller message'
     text_lines = 0 #vertical lines of text
     while text_length - _N*text_lines > _N:
         #increment text_lines aka lines of vertical text
@@ -133,11 +146,11 @@ def DrawText(image, message):
     text_draw.text((0,0), message, font=text_font, fill=(255))
     
     #text_image.save(f'./text/{filename}.png')
-    return text_image
+    return text_image, msg
 
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0 #32
-    input_image = Image.open(image)
+    input_image = Image.open(image).convert('RGB')
     text_image = t_image #Image.open(f'./text/{filename}.png')
 
     # Create a new PIL image with the same size as the encoded image:
@@ -158,7 +171,7 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
         #print (pixel)
-        (b,g,r,a) = pixel
+        (b,g,r) = pixel
         #center text into image with offset
         if pixelX >= x_offset and pixelX < (tx_size + x_offset) and pixelY >= y_offset and pixelY < (ty_size+y_offset):
             #get colors of text
@@ -205,7 +218,7 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
 
 def Decode(image):
     index = 0
-    input_image = Image.open(image)
+    input_image = Image.open(image).convert('RGB')
 
     # Create a new PIL image with the same size as the encoded image:
     decoded_image = Image.new("RGB", input_image.size)
@@ -218,7 +231,7 @@ def Decode(image):
 
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
-        (b,g,r,a) = pixel
+        (b,g,r) = pixel
         #Check if our color (Big Masked) matches the indexed pattern
         '''
         value 7 masks the 3 least sig bits to compare to our pattern (0 - 7)

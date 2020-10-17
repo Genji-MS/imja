@@ -1,0 +1,43 @@
+<!-- Imja: templates/index.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+    </br></br>
+    <div class="col-6 offset-3">
+        <div class="row" style="border:none; background:rgb(255, 255, 255);">
+            <div class="col-6 justify-content-md-center" >
+                <br>
+                <div id="wrapper">
+                    <button type="button" class="btn btn-success disabled" disabled>Encode Image</button>
+                </div>
+            </div>
+            <div class="col-6 justify-content-md-center">
+                <br>
+                <div id="wrapper">
+                    <form action="/imja">
+                        <button type="Submit" class="btn btn-outline-info">Decode Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="border:none; background:rgb(255,255,255);">
+            <div class="content">
+                <form action="/encode" method="POST" enctype="multipart/form-data">
+                    <br>
+                    <input type="file" name= "image" accept=".png" class="form-control-file" aria-describedby="fileHelp">
+                    <small id="fileHelp" class="form-text text-muted">Upload an image to encode your secret image into</small>
+                    <input class="form-control form-control-sm" type="text" name ="password" placeholder="create password" id="inputSmall">
+                    <textarea class="form-control" type="text" rows="3" name="message" spellcheck="false" placeholder="secret message"></textarea>
+                    
+                    <button type="Submit" class="btn btn-primary btn-lg">Encode Image</button>
+                </form>
+            </div>
+        </div>
+        <div class="row" style="border:none; background:rgb(255,255,255);">
+            <p class="text-danger">{{ msg }}</p>
+            <div class="image-container ml-auto">
+                <img src="{{ uri }}">
+            </div>
+        </div>
+    </div>
+{% endblock %}
