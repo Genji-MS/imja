@@ -17,6 +17,79 @@ def index_encode(uri = "/static/Imja.png", msg = ""):
 def index_decode(uri = "/static/Imja.png", msg = ""):
     return render_template('decode.html', uri=uri, msg=msg)
 
+@app.route('/heroku', methods=['POST'])
+def HerokuEncode():
+    """This function does everything in one go in an attempt to avoid consecutive file.open(file) issues with Heroku"""
+    msg = ""
+    password = request.form.get('password')
+    if password == "":
+        msg += f'  WARNING! No password provided.'
+    message = request.form.get('message')
+    if message == "" or message == None:
+        msg += f'  ATTENTION! No message written!'
+    image = request.files['image']    
+    Pattern(HashWord(password.encode()))
+
+    input_image = Image.open(image)
+    if input_image.mode == 'RGBA':
+        input_image = input_image.convert('RGB')
+    text_image = Image.new('L', input_image.size, color = (0))
+    x_size, y_size = input_image.size
+    _N = int(x_size/7) #characters before new line is inserted
+    _E = int(y_size/13) #vertical limit of characters
+    text_length = len(message)
+    if (_N*_E) < text_length:
+        msg =f'  ALERT!!! The message({text_length}) was too long to fit within the image area({_N*_E}). Use a bigger image, or a smaller message'
+    text_lines = 0 #vertical lines of text
+    while text_length - _N*text_lines > _N:
+        text_lines+=1
+        newLine_index = _N*text_lines+(1*(text_lines-1))
+        add_line = message[:newLine_index]+'\n'+message[newLine_index:]
+        message = add_line
+        text_length = len(message)-(text_lines*2)
+    #HEROKU friendly path
+    text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
+    text_draw = ImageDraw.Draw(text_image)
+    text_draw.text((0,0), message, font=text_font, fill=(255))
+ 
+    index = 0 #32
+    output_image = Image.new("RGB", input_image.size)
+    tx_size, ty_size = text_image.size
+    y_offset = int((y_size - ty_size) * 0.5)
+    x_offset = int((x_size - tx_size) * 0.5)
+    for i, pixel in enumerate(input_image.getdata()):
+        textPixel = text_image.getdata()
+        pixelX = i % x_size
+        pixelY = int(i / x_size)
+        (b,g,r) = pixel
+        if pixelX >= x_offset and pixelX < (tx_size + x_offset) and pixelY >= y_offset and pixelY < (ty_size+y_offset):
+            x = (pixelY - y_offset) * tx_size + (pixelX - x_offset)
+            if textPixel[x] != 0:
+                r = (r & 248) | pattern[index][0]
+                g = (g & 248) | pattern[index][1]
+                b = (b & 248) | pattern[index][2]
+            else:
+                if f'{r:0b}'.endswith(f'{bin(pattern[index][0])[-1]}'):
+                    if r < 255:
+                        r +=1
+                    else :
+                        r -=1      
+        output_image.putpixel((pixelX, pixelY), (b,g,r))
+        index += 1
+        if index >= 32:
+            index = 0
+    
+    img_byte_arr = BytesIO()
+    output_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = b64encode(img_byte_arr.getvalue())
+    img_string = str(img_byte_arr)
+    regex = r"(b')|(')"
+    subst = ""
+    img_string = re.sub(regex, subst, img_string, 0)
+    mime = "image/png"
+    uri = f'data:{mime};base64,{img_string}'
+    return render_template('encode.html', uri= uri, msg=msg)
+
 @app.route('/encode', methods=['POST'])
 def image_encode():
     msg = ""
@@ -142,7 +215,7 @@ def DrawText(image, message):
         #12345678901234567890
         #1 3 5 7 90 2 4 6 8 0
 
-    text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
+    text_font = ImageFont.truetype('/assets/fonts/Courier.dfont', 12)
     text_draw = ImageDraw.Draw(text_image)
     text_draw.text((0,0), message, font=text_font, fill=(255))
     
