@@ -34,8 +34,8 @@ Imja outputs images using an embedded URI. Nothing is saved to disk or stored se
 
 ## DEMO
 
-The source code is published on Heroku and free to use.
-
+The published source code is deployed on Heroku and free to use
+https://imja.herokuapp.com/
 
 
 ### What's inside:
