@@ -11,8 +11,8 @@ Using a SHA512 hash, Imja (IMage ninJA) will encode a secret message across the 
 Imja outputs images using an embedded URI. Nothing is saved to disk or stored server side
 
 - URI wiki: https://en.wikipedia.org/wiki/Data_URI_scheme
-A Data URI consists of:
-- ```data:[<media type>][;base64],<data>```
+- A Data URI consists of:
+ ```data:[<media type>][;base64],<data>```
 
 ## Limitations
 
