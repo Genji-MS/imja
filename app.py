@@ -142,7 +142,7 @@ def DrawText(image, message):
         #12345678901234567890
         #1 3 5 7 90 2 4 6 8 0
 
-    text_font = ImageFont.truetype('/assets/fonts/Courier.dfont', 12)
+    text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
     text_draw = ImageDraw.Draw(text_image)
     text_draw.text((0,0), message, font=text_font, fill=(255))
     
