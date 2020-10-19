@@ -151,7 +151,11 @@ def DrawText(image, message):
 
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0 #32
-    input_image = Image.open(image).convert('RGB')
+    input_image = Image.open(image)
+    print(f'opened as {input_image.mode}')
+    if input_image.mode == 'RGBA':
+        input_image = input_image.convert('RGB')
+        print(f'converted to ‘{input_image.mode}')
     text_image = t_image #Image.open(f'./text/{filename}.png')
 
     # Create a new PIL image with the same size as the encoded image:
@@ -219,7 +223,11 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
 
 def Decode(image):
     index = 0
-    input_image = Image.open(image).convert('RGB')
+    input_image = Image.open(image)
+    print(f'opened as {input_image.mode}')
+    if input_image.mode == 'RGBA':
+        input_image = input_image.convert('RGB')
+        print(f'converted to ‘{input_image.mode}')
 
     # Create a new PIL image with the same size as the encoded image:
     decoded_image = Image.new("RGB", input_image.size)
