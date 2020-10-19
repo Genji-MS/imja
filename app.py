@@ -27,7 +27,7 @@ def image_encode():
     if message == "" or message == None:
         msg += f'  ATTENTION! No message written!'
     image = request.files['image']    
-    
+
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
     #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
@@ -55,6 +55,7 @@ def image_encode():
 def image_decode():
     password = request.form.get('password')
     image = request.files['image']
+    msg = ""
     
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
