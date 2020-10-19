@@ -51,8 +51,10 @@ MANIFEST
 
 # Slack bot Token
 .env
+.venv
 # virtual environment folder
-env
+env/
+venv/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

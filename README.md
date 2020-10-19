@@ -1,4 +1,3 @@
-# IMJA
 ![Logo of the project](https://github.com/Genji-MS/imja/blob/main/static/Imja.png)
 
 # IMJA
@@ -11,27 +10,27 @@ Using a SHA512 hash, Imja (IMage ninJA) will encode a secret message across the 
 
 Imja outputs images using an embedded URI. Nothing is saved to disk or stored server side
 
-URI wiki: https://en.wikipedia.org/wiki/Data_URI_scheme
+- URI wiki: https://en.wikipedia.org/wiki/Data_URI_scheme
 A Data URI consists of:
-data:[<media type>][;base64],<data>
+- ```data:[<media type>][;base64],<data>```
 
 ## Limitations
 
-Rich text, HTML, and other code is not supported in the message. Any/All Special characters will appear as text
+- Rich text, HTML, and other code is not supported in the message. Any/All Special characters will appear as text
 
-IMJA supports only .png images without transparency
+- IMJA supports only .png images without transparency
 - 'RGBA' images will be converted to 'RGB'
 
-Modifying an image after it has been encoded will compromise the hidden message quality
+- Modifying an image after it has been encoded will compromise the hidden message quality
 
-Images of any size are supported up to a URI character length of ~2,083 (browser limitation)
+- Images of any size are supported up to the URI character length of ~2,083 (browser limitation)
 
-Encoded text is fixed at 7px x 13px per character
+- Encoded text is fixed at 7px x 13px per character
 - A message greater then the image width will be auto-wrapped by character
-- A message greater then the available image size will be clipped &/or truncated with a warning that the message has exceeded the limit
+- A message greater then the available image size will have visible clipping with a detailed warning of the character limit
 - Zooming in is recommended to read a decoded image.
 
-Encoding/Decoding a message with no image attached will result in an unhandled exception (browser error)
+- Encoding/Decoding a message with no image attached will result in an unhandled exception (browser error)
 
 ## DEMO
 
