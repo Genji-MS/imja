@@ -7,7 +7,7 @@
 FROM python:3.7-slim-buster
 
 # STEP 2: Install required dependencies.
-RUN pip install Flask
+RUN pip install -r requirements.txt
 
 # STEP 3: Copy the source code in the current directory to the container.
 # Store it in a folder named /app.
