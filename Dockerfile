@@ -16,7 +16,6 @@ WORKDIR /app
 # STEP 4: Dependencies for Pillow
 RUN apk update \
     && apk add --virtual build-dependencies gcc python3-dev musl-dev \
-    && pip install psycopg2 \
     && apk add jpeg-dev zlib-dev libjpeg \
     && pip install Pillow \
     && apk del build-dependencies
