@@ -13,7 +13,15 @@ ADD . /app
 # STEP 3: Set working directory to /app so we can execute commands in it
 WORKDIR /app
 
-# STEP 4: Install required dependencies.
+# STEP 4: Dependencies for Pillow
+RUN apk update \
+    && apk add --virtual build-dependencies gcc python3-dev musl-dev \
+    && pip install psycopg2 \
+    && apk add jpeg-dev zlib-dev libjpeg \
+    && pip install Pillow \
+    && apk del build-dependencies
+
+# STEP 4.5: Install required dependencies.
 RUN pip install -r requirements.txt
 
 # STEP 5: Declare environment variables
