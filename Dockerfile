@@ -14,7 +14,10 @@ ADD . /app
 WORKDIR /app
 
 # STEP 4: Dependencies for Pillow
-RUN pip add zlib-dev jpeg-dev gcc musl-dev \
+RUN pip install zlib-dev \
+    && pip install jpeg-dev \
+    && pip install gcc \
+    && pip install musl-dev \
     && pip install -r requirements.txt
 #Did not work... 
 #RUN pip add --virtual build-dependencies gcc python3-dev musl-dev \
