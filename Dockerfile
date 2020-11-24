@@ -14,19 +14,15 @@ ADD . /app
 WORKDIR /app
 
 # STEP 4: Dependencies for Pillow
-RUN pip install zlib-dev \
-    && pip install jpeg-dev \
-    && pip install gcc \
-    && pip install musl-dev \
-    && pip install -r requirements.txt
-#Did not work... 
-#RUN pip add --virtual build-dependencies gcc python3-dev musl-dev \
-#    && pip add jpeg-dev zlib-dev libjpeg \
-#    && pip install Pillow \
-#    && pip del build-dependencies
+#RUN apk add zlib-dev jpeg-dev gcc musl-dev
+RUN pip update \
+    && apt-get add --virtual build-dependencies gcc python3-dev musl-dev \
+    && apt-get add jpeg-dev zlib-dev libjpeg \
+    && pip install Pillow \
+    && apt-get del build-dependencies
 
 # STEP 4.5: Install required dependencies.
-#RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # STEP 5: Declare environment variables
 ENV FLASK_APP=app.py
