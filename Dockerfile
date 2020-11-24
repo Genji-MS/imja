@@ -15,8 +15,7 @@ WORKDIR /app
 
 # STEP 4: Dependencies for Pillow
 #RUN apk add zlib-dev jpeg-dev gcc musl-dev
-RUN pip update \
-    && apt-get add --virtual build-dependencies gcc python3-dev musl-dev \
+RUN apt-get add --virtual build-dependencies gcc python3-dev musl-dev \
     && apt-get add jpeg-dev zlib-dev libjpeg \
     && pip install Pillow \
     && apt-get del build-dependencies
