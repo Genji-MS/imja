@@ -3,7 +3,7 @@
 # Learn why here: https://pythonspeed.com/articles/base-image-python-docker-images/
 # TLDR: Alpine is very slow when it comes to running Python!
 
-# STEP 1: Install base image. Optimized for Python.
+# STEP 1: Install base image.
 FROM library/python:3.7-alpine as base
 FROM base as builder
 RUN mkdir /install
@@ -16,32 +16,25 @@ ADD . /app
 # STEP 3: Set working directory to /app so we can execute commands in it
 WORKDIR /app
 
-# Install pillow globally.
-ENV LIBRARY_PATH=/lib:/usr/lib
-
 # STEP 4: Dependencies for Pillow
-#RUN apk add zlib-dev jpeg-dev gcc musl-dev
-#--virtual build-dependencies 
+# Path to install pillow globally.
+ENV LIBRARY_PATH=/lib:/usr/lib
+#dependencies as from stackoverflow https://stackoverflow.com/questions/57787424/django-docker-python-unable-to-install-pillow-on-python-alpine
 RUN apk update \
     && apk add --virtual build-dependencies gcc python3-dev musl-dev \
     && apk add jpeg-dev zlib-dev libjpeg \
     && pip install Pillow \
     && apk del build-dependencies
-#&& apt-get del build-dependencies
-#RUN apt-get install gcc python3-dev musl-dev \
-#    && apt-get install jpeg-dev zlib-dev libjpeg \
-#RUN apt-get install libjpeg-dev \
-#    && pip install Pillow
 
-# STEP 4.5: Install required dependencies.
+# STEP 5: Install required dependencies. -Pillow
 RUN pip install -r requirements.txt
 
-# STEP 5: Declare environment variables
+# STEP 6: Declare environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=development
 
-# STEP 6: Expose the port that Flask is running on
+# STEP 7: Expose the port that Flask is running on
 EXPOSE 5000
 
-# STEP 7: Run Flask!
+# STEP 8: Run Flask!
 CMD ["flask", "run", "--host=0.0.0.0"]

@@ -28,14 +28,19 @@ Imja outputs images using an embedded URI. Nothing is saved to disk or stored se
 - Encoded text is fixed at 7px x 13px per character
 - A message greater then the image width will be auto-wrapped by character
 - A message greater then the available image size will have visible clipping with a detailed warning of the character limit
-- Zooming in is recommended to read a decoded image.
+- Zooming into a decoded image is recommended to read the text
+
+- URI's are not supported at the base level on some browzers. Opening an image in another tab may cause an error
 
 - Encoding/Decoding a message with no image attached will result in an unhandled exception (browser error)
 
 ## DEMO
 
-The published source code is deployed on Heroku and free to use
+Imja is deployed on Heroku and free to use
 https://imja.herokuapp.com/
+
+The Dockerized version is deployed at
+https://imja.dev.genji.games/
 
 
 ### What's inside:
