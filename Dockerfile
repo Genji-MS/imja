@@ -4,7 +4,10 @@
 # TLDR: Alpine is very slow when it comes to running Python!
 
 # STEP 1: Install base image. Optimized for Python.
-FROM python:3.7-slim-buster
+FROM library/python:3.7-alpine as base
+FROM base as builder
+RUN mkdir /install
+WORKDIR /install
 
 # STEP 2: Copy the source code in the current directory to the container.
 # Store it in a folder named /app.
@@ -13,14 +16,23 @@ ADD . /app
 # STEP 3: Set working directory to /app so we can execute commands in it
 WORKDIR /app
 
+# Install pillow globally.
+ENV LIBRARY_PATH=/lib:/usr/lib
+
 # STEP 4: Dependencies for Pillow
 #RUN apk add zlib-dev jpeg-dev gcc musl-dev
 #--virtual build-dependencies 
+RUN apk update \
+    && apk add --virtual build-dependencies jpeg-dev zlib-dev libjpeg \
+    #gcc python3-dev musl-dev \
+    #&& apk add jpeg-dev zlib-dev libjpeg \
+    && pip install Pillow \
+    && apk del build-dependencies
 #&& apt-get del build-dependencies
 #RUN apt-get install gcc python3-dev musl-dev \
 #    && apt-get install jpeg-dev zlib-dev libjpeg \
-RUN sudo apt-get install libjpeg-dev \
-    && pip install Pillow
+#RUN apt-get install libjpeg-dev \
+#    && pip install Pillow
 
 # STEP 4.5: Install required dependencies.
 RUN pip install -r requirements.txt
