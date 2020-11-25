@@ -23,9 +23,8 @@ ENV LIBRARY_PATH=/lib:/usr/lib
 #RUN apk add zlib-dev jpeg-dev gcc musl-dev
 #--virtual build-dependencies 
 RUN apk update \
-    && apk add --virtual build-dependencies jpeg-dev zlib-dev libjpeg \
-    #gcc python3-dev musl-dev \
-    #&& apk add jpeg-dev zlib-dev libjpeg \
+    && apk add --virtual build-dependencies gcc python3-dev musl-dev \
+    && apk add jpeg-dev zlib-dev libjpeg \
     && pip install Pillow \
     && apk del build-dependencies
 #&& apt-get del build-dependencies
