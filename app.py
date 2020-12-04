@@ -48,6 +48,8 @@ def HerokuEncode():
         message = add_line
         text_length = len(message)-(text_lines*2)
     #HEROKU friendly path
+
+    #CUSTOM FONT is disabled as it throws 'ImportError: The _imagingft C module is not installed' in docker
     #text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
     text_draw = ImageDraw.Draw(text_image)
     #text_draw.text((0,0), message, font=text_font, fill=(255))
