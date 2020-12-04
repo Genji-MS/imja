@@ -24,8 +24,8 @@ ENV LIBRARY_PATH=/lib:/usr/lib
 RUN apk update \
     && apk add --virtual build-dependencies g++ gcc python3-dev musl-dev \
     && apk add jpeg-dev zlib-dev libjpeg \
-    && pip install Pillow Python-FreeType \
-    && apk del build-dependencies
+    && pip install Pillow
+#    && apk del build-dependencies
 
 # STEP 5: Install required dependencies. -Pillow
 RUN pip install -r requirements.txt
