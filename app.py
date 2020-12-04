@@ -48,9 +48,10 @@ def HerokuEncode():
         message = add_line
         text_length = len(message)-(text_lines*2)
     #HEROKU friendly path
-    text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
+    #text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
     text_draw = ImageDraw.Draw(text_image)
-    text_draw.text((0,0), message, font=text_font, fill=(255))
+    #text_draw.text((0,0), message, font=text_font, fill=(255))
+    text_draw.text((0,0), message, fill=(255))
  
     index = 0 #32
     output_image = Image.new("RGB", input_image.size)

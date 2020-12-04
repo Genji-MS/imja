@@ -22,10 +22,10 @@ ENV LIBRARY_PATH=/lib:/usr/lib
 # Pillow dependencies as listed from stackoverflow https://stackoverflow.com/questions/57787424/django-docker-python-unable-to-install-pillow-on-python-alpine
 # g++ install compiler, freetype-dev <Python-FreeType> TrueType font library (so that encode works) 
 RUN apk update \
-    && apk add --virtual build-dependencies g++ gcc python3-dev musl-dev \
+    && apk add --virtual build-dependencies gcc python3-dev musl-dev \
     && apk add jpeg-dev zlib-dev libjpeg \
-    && pip install Pillow
-#    && apk del build-dependencies
+    && pip install Pillow \
+    && apk del build-dependencies
 
 # STEP 5: Install required dependencies. -Pillow
 RUN pip install -r requirements.txt
