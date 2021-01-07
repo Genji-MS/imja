@@ -272,21 +272,28 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
                 b = (b & 252) | pattern[index][2]
                 #print (f'r:{r} g:{g} b:{b}')
                 #set shade of white, check color of white pixel and store that info to the closest of 8 shades of white
+                print (textPixel[x])
+                for w in range(0,8,1):
+                    if textPixel[x] <= whites[w]:
+                        print(w)
+                        r += whites_dict[w][0]
+                        g += whites_dict[w][1]
+                        b += whites_dict[w][2]
+                        break
             else:
-                #if text black ensure not of pattern, do NOT modify the image to be 00! 
+                #if text black ensure not of pattern, do NOT modify the image to be of (text)black color! 
+
+                #old versions of if statement, reference for working with the .endswith method
                 #(red ONLY) f'{color:0b}'.endswith( str( pattern[:-1] ) ):
-                    #if {color} < 255 +=1
-                    #-=1
-                #print (f'a:{(r & 2)} b:{pattern[index][0]} ={(r & 2) == pattern[index][0]}')
                 #f'{r}'.endswith(f'{bin(pattern[index][0])[-1]}'):
+
+                #print (f'a:{(r & 2)} b:{pattern[index][0]} ={(r & 2) == pattern[index][0]}')
+                #bugs were present with (r & 2)... and trailing in-line comments even though the print above works
                 if (r&2) == pattern[index][0]:
-                    #print (r)
                     if r < 254:
                         r +=2
                     else:
                         r -=2
-                    #print (r)
-            #print (f'r:{r} g:{g} b:{b}')
         else:
             #not doing anything with additional outside of the text area
             pass
@@ -298,9 +305,6 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         if index >= 64:
             index = 0
     
-    #option to black empty spaces, How to determine empty text area? or dont touch... Grey color in encode.
-    #> optionaly check for grey, depends on encoding
-
     #output_image.save(f'./output/{filename}.png')
     return output_image
 
@@ -329,7 +333,8 @@ def Decode(image):
         #print (f'maskedR:{r&7} indexedR:{pattern[index][0]}')
         if (r&2) == pattern[index][0] and (g&2) == pattern[index][1] and (b&2) == pattern[index][2]:
             #Set color shade
-            decoded_image.putpixel((pixelX,pixelY), (255,255,255))#(b,g,r))
+            color = whites[(r&1)*4+(g&1)*2+(b&1)]
+            decoded_image.putpixel((pixelX,pixelY), (color,color,color))#(b,g,r))
 
         index += 1
         if index >= 64: #32
