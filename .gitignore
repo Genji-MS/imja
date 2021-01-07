@@ -243,3 +243,4 @@ iOSInjectionProject/
 # End of https://www.gitignore.io/api/xcode,swift,python,firebase,cocoapods,visualstudiocode
 GoogleService-Info.plist
 V1/
+V2/

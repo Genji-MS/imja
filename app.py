@@ -7,6 +7,18 @@ import re
 
 app = Flask(__name__)
 pattern = [] #hashed pattern for encoding
+#above black 2>66 = 0, 67 > 107 = 1 ...
+whites = [66,107,141,184,209,221,244,255]
+whites_dict = {
+    0:[0,0,0],
+    1:[0,0,1],
+    2:[0,1,0],
+    3:[0,1,1],
+    4:[1,0,0],
+    5:[1,0,1],
+    6:[1,1,0],
+    7:[1,1,1]
+}
 
 @app.route('/')
 def index_encode(uri = "/static/Imja.png", msg = ""):
@@ -136,6 +148,7 @@ def image_decode():
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
     #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
+    #
     Pattern(HashWord(password.encode()))
     o_image = Decode(image)
 
@@ -143,6 +156,7 @@ def image_decode():
     o_image.save(img_byte_arr, format='PNG')
     img_byte_arr = b64encode(img_byte_arr.getvalue())
 
+    #remove quotes
     img_string = str(img_byte_arr)
     regex = r"(b')|(')"
     subst = ""
@@ -158,31 +172,15 @@ def HashWord(words):
     return(hashedWords)
 
 def Pattern(hashedWords):
-    ints = []
-    #break the hash into 2 digit sequences (HEX)
-    ints = re.findall('..', hashedWords)
-    #Combine items into an interable list so that we can call two items per loop
-    pairints = iter(ints)
-    #Convert each pair of ints from hex to int, and add the pair creating a 9 bit integer
-    #print (len(ints))
-    for num in pairints:
-        i = int(num,16) #Hex2Int(num)
-        j = int(next(pairints),16) #Hex2Int(next(pairints))
-        k = i + j
-        Ox = bin(k)
-
-        #break hex into individual channels
-        # while len(Ox) < 11:
-        #     temp = Ox[:2]+"0"+Ox[2:]
-        #     Ox = temp
-        # OxR = Ox[2:5]
-        # OxG = Ox[5:8]
-        # OxB = Ox[8:]
-        R = k >> 6
-        G = (k & 56) >> 3
-        B = (k & 7)
+    #convert the hash into sequence of digits 0-7
+    for num in hashedWords:
+        i = int(num,16)%8 #Hex2Int(num)
+        #break hex into individual channels, search for match in the 2nd bit
+        R = (i & 4) >> 1
+        G = (i & 2)
+        B = (i & 1) << 1
         pattern.append( (R, G, B) )
-        #print(f'i:{i} j:{j} k:{k} 0x:{Ox} 0xR:{OxR} 0xG:{OxG} 0xB:{OxB} R:{R} G:{G} B:{B}')
+        #print(f'i:{i}  R:{R} G:{G} B:{B}')
     #return pattern #global variable
 
 def DrawText(image, message):
@@ -226,12 +224,12 @@ def DrawText(image, message):
     return text_image, msg
 
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
-    index = 0 #32
+    index = 0
     input_image = Image.open(image)
-    print(f'opened as {input_image.mode}')
+    #print(f'opened as {input_image.mode}')
     if input_image.mode == 'RGBA':
         input_image = input_image.convert('RGB')
-        print(f'converted to ‘{input_image.mode}')
+        #print(f'converted to ‘{input_image.mode}')
     text_image = t_image #Image.open(f'./text/{filename}.png')
 
     # Create a new PIL image with the same size as the encoded image:
@@ -248,7 +246,6 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         #print(f'{pixel:0b}')
         pixelX = i % x_size
         pixelY = int(i / x_size)
-
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
         #print (pixel)
@@ -265,22 +262,31 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
                 #{color} & 1111 1000 => | 00000{pattern}
                 #print (f' r:{bin(r)[2:]} mask:{bin(248)[2:]} &:{ bin(r & 248) } pattern:{bin(pattern[index][0])} finalR:{bin((r&248)|pattern[index][0])}')
                 '''
-                value 248 keeps everything above 7, it zeroes out the 3 least sig bits
+                value 252 keeps everything above 3, it zeroes out the 2 least sig bits
                 pattern[index] will fill in these least sig bits
+                bit 2 is the pattern
+                bit 1 is the shade of white 
                 '''
-                r = (r & 248) | pattern[index][0]
-                g = (g & 248) | pattern[index][1]
-                b = (b & 248) | pattern[index][2]
+                r = (r & 252) | pattern[index][0]
+                g = (g & 252) | pattern[index][1]
+                b = (b & 252) | pattern[index][2]
+                #print (f'r:{r} g:{g} b:{b}')
+                #set shade of white, check color of white pixel and store that info to the closest of 8 shades of white
             else:
-                #if text black ensure not of pattern, do NOT make 000,000,000
+                #if text black ensure not of pattern, do NOT modify the image to be 00! 
                 #(red ONLY) f'{color:0b}'.endswith( str( pattern[:-1] ) ):
                     #if {color} < 255 +=1
                     #-=1
-                if f'{r:0b}'.endswith(f'{bin(pattern[index][0])[-1]}'):
-                    if r < 255:
-                        r +=1
-                    else :
-                        r -=1
+                #print (f'a:{(r & 2)} b:{pattern[index][0]} ={(r & 2) == pattern[index][0]}')
+                #f'{r}'.endswith(f'{bin(pattern[index][0])[-1]}'):
+                if (r&2) == pattern[index][0]:
+                    #print (r)
+                    if r < 254:
+                        r +=2
+                    else:
+                        r -=2
+                    #print (r)
+            #print (f'r:{r} g:{g} b:{b}')
         else:
             #not doing anything with additional outside of the text area
             pass
@@ -288,7 +294,8 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         output_image.putpixel((pixelX, pixelY), (b,g,r))
         #increase index, and repeat over our pattern
         index += 1
-        if index >= 32:
+        # prevously was 32, because that is the length of sha512/2 as we combined every other hex
+        if index >= 64:
             index = 0
     
     #option to black empty spaces, How to determine empty text area? or dont touch... Grey color in encode.
@@ -303,7 +310,7 @@ def Decode(image):
     print(f'opened as {input_image.mode}')
     if input_image.mode == 'RGBA':
         input_image = input_image.convert('RGB')
-        print(f'converted to ‘{input_image.mode}')
+        #print(f'converted to ‘{input_image.mode}')
 
     # Create a new PIL image with the same size as the encoded image:
     decoded_image = Image.new("RGB", input_image.size)
@@ -313,20 +320,19 @@ def Decode(image):
         #print(f'{pixel:0b}')
         pixelX = i % x_size
         pixelY = int(i / x_size)
-
         #Images are encoded backwards, we want to split accordingly
-        #get colors of image
         (b,g,r) = pixel
-        #Check if our color (Big Masked) matches the indexed pattern
+        #Check if our color (Bit Masked) matches the indexed pattern
         '''
-        value 7 masks the 3 least sig bits to compare to our pattern (0 - 7)
+        value 2 masks the 2nd least sig bit to compare to our pattern
         '''
         #print (f'maskedR:{r&7} indexedR:{pattern[index][0]}')
-        if (r&7) == pattern[index][0] and (g&7) == pattern[index][1] and (b&7) == pattern[index][2]:
+        if (r&2) == pattern[index][0] and (g&2) == pattern[index][1] and (b&2) == pattern[index][2]:
+            #Set color shade
             decoded_image.putpixel((pixelX,pixelY), (255,255,255))#(b,g,r))
 
         index += 1
-        if index >= 32:
+        if index >= 64: #32
             index = 0
     
     #decoded_image.save(f'./decode/{filename}.png')
