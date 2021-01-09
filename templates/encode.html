@@ -24,20 +24,90 @@
             <div class="content">
                 <form action="/encode" method="POST" enctype="multipart/form-data">
                     <br>
-                    <input type="file" name= "image" accept=".png" class="form-control-file" aria-describedby="fileHelp">
+                    <input type="file" id="imgLoader" name="image" accept=".png" class="form-control-file" aria-describedby="fileHelp">
                     <small id="fileHelp" class="form-text text-muted">Upload an image to encode your secret image into</small>
-                    <input class="form-control form-control-sm" type="text" name ="password" placeholder="create password" id="inputSmall">
+                    <input class="form-control form-control-sm" type="text" name="password" placeholder="create password" id="inputSmall">
+
                     <textarea class="form-control" type="text" rows="3" name="message" spellcheck="false" placeholder="secret message"></textarea>
-                    
+                    <input type="text" id="txtImgSize" readonly="readonly">
+                    <canvas id="textCanvas" width='500' height='500'></canvas>
+
                     <button type="Submit" class="btn btn-primary btn-lg">Encode Image</button>
+                    <input id="butn" type="button" value="Encode Message" />
                 </form>
             </div>
         </div>
-        <div class="row" style="border:none; background:rgb(255,255,255);">
-            <p class="text-danger">{{ msg }}</p>
+        <div class="row" style="border:none; background:rgb(255,255,255);">  
+            <p class="text-danger" id="txtInfo">{{ msg }}</p>
             <div class="image-container ml-auto">
                 <img src="{{ uri }}">
             </div>
         </div>
     </div>
+    <script>
+        var canvas = new fabric.Canvas('textCanvas');
+
+        var rect = new fabric.Rect({
+            left:0,
+            top:0,
+            fill:'black',
+            width:canvas.width,
+            height:canvas.height,
+            opacity:0.7,
+            selectable:false
+        });
+        canvas.add(rect);
+
+        var textbox = new fabric.Textbox('Secret Message', {
+            left: 5,
+            top: 5,
+            width: canvas.width,
+            fontSize: 20, 
+        });
+        canvas.add(textbox).setActiveObject(textbox);
+        textbox.set({fill: '#FFF'})
+        
+        // https://stackoverflow.com/questions/21715812/how-to-upload-an-image-to-a-canvas-with-fabric-js
+        document.getElementById('imgLoader').onchange = function handleImage(e) {
+        var reader = new FileReader();
+            reader.onload = function (event){
+                var imgObj = new Image();
+                imgObj.src = event.target.result;
+                imgObj.onload = function () {
+                    var image = new fabric.Image(imgObj);
+                    // image.set({
+                    //     angle: 0,
+                    //     padding: 0,
+                    //     cornersize: 0,
+                    //     height:110,
+                    //     width:110,
+                    // });
+                    document.getElementById('txtImgSize').value='Size: '+image.width+' x '+image.height;
+
+                    if (image.width > image.height){
+                        const scaleFactor = canvas.width/image.width;
+                        rect.set({width: canvas.width});
+                        rect.set({height: image.height * scaleFactor});
+                    } else {
+                        const scaleFactor = canvas.height/image.height;
+                        rect.set({height: canvas.height});
+                        rect.set({width: image.width * scaleFactor});
+                    }
+                    textbox.set({width: rect.width-10});
+                // canvas.centerObject(image);
+                // canvas.add(image);
+                canvas.renderAll();
+                }
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+
+        //How to save
+        // $("#butn").click(function(){
+        //     $("#textCanvas").get(0).toBlob(function(blob){
+        //         saveAs(blob,"filename.png")
+        //     })
+        // })
+
+    </script>
 {% endblock %}

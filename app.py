@@ -5,9 +5,8 @@ from hashlib import sha512
 from io import BytesIO
 import re
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='assets')
 pattern = [] #hashed pattern for encoding
-#above black 2>66 = 0, 67 > 107 = 1 ...
 whites = [66,107,141,184,209,221,244,255]
 whites_dict = {
     0:[0,0,0],
@@ -21,9 +20,9 @@ whites_dict = {
 }
 
 @app.route('/')
-def index_encode(uri = "/static/Imja.png", msg = ""):
+def index_encode(uri = "/static/Imja.png", msg = "", file = "", bounds = [0,0]):
     # TODO: random password generator from brute force library
-    return render_template('encode.html', uri=uri, msg=msg)
+    return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
 
 @app.route('/imja')
 def index_decode(uri = "/static/Imja.png", msg = ""):
@@ -108,13 +107,26 @@ def HerokuEncode():
 @app.route('/encode', methods=['POST'])
 def image_encode():
     msg = ""
+    #Check for file, if no > reload the page + warning
+    file = image = request.files['image']  
+    if file == "" or file == None:
+        uri = "/static/Imja.png"
+        msg += f'  WARNING! No image selected.'
+        bounds = [0,0]
+        return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
+    #Check for message, if no > reload the page with the image dimensions to write message
+    message = request.form.get('message')
+    if message == "" or message == None:
+        uri = ""
+        input_image = Image.open(image) 
+        x_size, y_size = input_image.size
+        bounds = [x_size,y_size]
+        return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
+        #msg += f'  ATTENTION! No message written!'
+    #Check for PW, if no > add warning, but process still works
     password = request.form.get('password')
     if password == "":
         msg += f'  WARNING! No password provided.'
-    message = request.form.get('message')
-    if message == "" or message == None:
-        msg += f'  ATTENTION! No message written!'
-    image = request.files['image']    
 
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
@@ -137,7 +149,9 @@ def image_encode():
     mime = "image/png"
     uri = f'data:{mime};base64,{img_string}'
 
-    return render_template('encode.html', uri= uri, msg=msg)
+    bounds = [0,0]
+
+    return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
 
 @app.route('/decode', methods=['POST'])
 def image_decode():
