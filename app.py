@@ -106,17 +106,13 @@ def HerokuEncode():
 
 @app.route('/encodeJS', methods=['POST'])
 def image_encode_JS():
-    msg = ""
     image = request.form['image_data']
     password = request.form['password_data']
     message = request.form['message_data']
-
     #print(f'image pulled: {image}\npassword_pulled: {password}\nmessage pulled: {message}')
     Pattern(HashWord(password.encode()))
-
     #u_image = b64decode(str(image))
     #t_image = b64decode(str(message))
-
     '''WARNING, Do not Regex an image URI, for some reason it will crash!!!!
     regex = r'(.+,)|(")'
     subst = ""
@@ -125,15 +121,18 @@ def image_encode_JS():
     u_image = image[23:-1]
     t_image = message[23:-1]
 
+    #This creates local files
     u_image = b64decode(u_image)
-    filename = 'user_image.png'  # I assume you have a way of picking unique filenames
-    with open(filename, 'wb') as f: #"w"rite and "b"inary
-        f.write(u_image)
+    # filename = 'user_image.png'  # I assume you have a way of picking unique filenames
+    # with open(filename, 'wb') as f: #"w"rite and "b"inary
+    #     f.write(u_image)
     t_image = b64decode(t_image)
-    filename = 'text_image.png'  # I assume you have a way of picking unique filenames
-    with open(filename, 'wb') as f: #"w"rite and "b"inary
-        f.write(t_image)
-    o_image = Encode('user_image.png','text_image.png')
+    # filename = 'text_image.png'  # I assume you have a way of picking unique filenames
+    # with open(filename, 'wb') as f: #"w"rite and "b"inary
+    #     f.write(t_image)
+    #o_image = Encode('user_image.png','text_image.png')
+
+    o_image = Encode(u_image,t_image)
 
     img_byte_arr = BytesIO()
     o_image.save(img_byte_arr, format='PNG')
@@ -237,17 +236,17 @@ def Pattern(hashedWords):
 
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0
-    #image = Image.open(BytesIO(image))
-    input_image = Image.open(image)
+    input_image = Image.open(BytesIO(image))
+    #input_image = Image.open(image)
     #print(f'opened as {input_image.mode}')
     if input_image.mode == 'RGBA':
         input_image = input_image.convert('RGB')
         #print(f'converted to ‘{input_image.mode}')
 
-    #text_image = Image.open(BytesIO(t_image))
-    text_image = Image.open(t_image) #text_image = t_image #Image.open(f'./text/{filename}.png')
+    text_image = Image.open(BytesIO(t_image))
+    #text_image = Image.open(t_image) #text_image = t_image #Image.open(f'./text/{filename}.png')
     #Convert text image to Greyscale, as it will import as RGBA
-    text_image = input_image.convert('L')
+    text_image = text_image.convert('L')
 
     # Create a new PIL image with the same size as the encoded image:
     output_image = Image.new("RGB", input_image.size)
@@ -329,7 +328,7 @@ def Decode(image):
         #print(f'converted to ‘{input_image.mode}')
 
     # Create a new PIL image with the same size as the encoded image:
-    decoded_image = Image.new("RGB", input_image.size)
+    decoded_image = Image.new("L", input_image.size)
     x_size, y_size = input_image.size
 
     for i, pixel in enumerate(input_image.getdata()):
@@ -346,7 +345,7 @@ def Decode(image):
         if (r&2) == pattern[index][0] and (g&2) == pattern[index][1] and (b&2) == pattern[index][2]:
             #Set color shade
             color = whites[(r&1)*4+(g&1)*2+(b&1)]
-            decoded_image.putpixel((pixelX,pixelY), (color,color,color))#(b,g,r))
+            decoded_image.putpixel((pixelX,pixelY), (color))#(b,g,r))
 
         index += 1
         if index >= 64: #32

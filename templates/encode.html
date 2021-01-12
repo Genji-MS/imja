@@ -29,13 +29,14 @@
                 <input type="text" id="txtImgSize" readonly="readonly">
                 <canvas id="textCanvas" width='500' height='500'></canvas>
                 <button type="button" id="butn" value="Canvas to URI" class="btn btn-primary btn-lg">Encode Image URI</button>                
+                <button type="button" id="saveButn" value="Blob to File" class="btn btn-primary btn-lg">Save to File</button>                
             </div>
         </div>
         <div class="row" style="border:none; background:rgb(255,255,255);">  
             <p class="text-danger" id="txtInfo">{{ msg }}</p>
-            <div class="image-container ml-auto">
+            <!-- <div class="image-container ml-auto">
                 <img src="{{ uri }}">
-            </div>
+            </div> -->
         </div>
     </div>
     <script>
@@ -45,7 +46,7 @@
         window.image ='';
         window.password = '';
         // bool not needed currently until componets to display image are resolved
-        //window.showImg = true;
+        window.showImg = true;
 
         var rect = new fabric.Rect({
             left:0,
@@ -53,7 +54,7 @@
             fill:'black',
             width:canvas.width,
             height:canvas.height,
-            opacity:0.7,
+            opacity:0.0,
             selectable:false
         });
         canvas.add(rect);
@@ -61,37 +62,37 @@
         var textbox = new fabric.Textbox('Secret Message', {
             left: 5,
             top: 5,
-            width: canvas.width,
+            //width: canvas.width,
             fontSize: 20, 
         });
-        canvas.add(textbox).setActiveObject(textbox);
+        canvas.add(textbox)
         textbox.set({fill: '#FFF'})
         
         // Doesn't scale image properly. Also, text box needs to be set to white
-        // var imja = new Image();
-        //     imja.src = response;
-        //     fabric.Image.fromURL('/Imja.png', function(image){
-        //     img.onload = function () {
-        //         document.getElementById('txtImgSize').value='Image Encoding Complete';
-        //         const scaleFactor = canvas.width/img.width;                    
-        //         var imgbase64 = new fabric.Image(img, {
-
-        //     fabric.Image.fromURL('/Imja.png', function(imja){
-        //     const scaleFactor = canvas.width/img.width;
-        //     imja.scaleX = scaleFactor
-        //     imja.scaleY = scaleFactor
-        //     canvas.add(imja);
-        // });
+        var img_imja = new Image();
+            img_imja.src = '/Imja.png';
+            img_imja.onload = function () {
+                const scaleFactor = canvas.width/img_imja.width;
+                var imja = new fabric.Image(img_imja, {
+                    scaleX: scaleFactor,
+                    scaleY: scaleFactor,
+                    top: 120
+                })
+                canvas.add(imja);
+            }
         
         // https://stackoverflow.com/questions/21715812/how-to-upload-an-image-to-a-canvas-with-fabric-js
         document.getElementById('imgLoader').onchange = function handleImage(e) {
         var reader = new FileReader();
             reader.onload = function (event){
-                // Cannot find object 'img'
-                // if (window.showImg == true){
-                //     window.showImg = false;
-                //     canvas.remove(img);
-                // }
+                //Cannot find object 'imja'
+                //console.log(canvas.getObjects()[2]);
+                if (window.showImg == true){
+                    window.showImg = false;
+                    canvas.remove(canvas.getObjects()[2]);
+                    rect.set({opacity: 0.7})
+                }
+                //console.log(canvas.getObjects());
                 var imgObj = new Image();
                 imgObj.src = event.target.result;
                 window.image = event.target.result;
@@ -108,9 +109,10 @@
                         rect.set({width: image.width * window.scaleFactor});
                     }
                     //make our textbox smaller then the rect
-                    textbox.set({width: rect.width-10});
+                    //textbox.set({width: rect.width-10});
                 // canvas.centerObject(image);
-                canvas.renderAll();
+                canvas.renderAll().setActiveObject(textbox);
+                //canvas.renderAll();
                 }   
             }
             reader.readAsDataURL(e.target.files[0]);
@@ -137,27 +139,38 @@
                 password_data: JSON.stringify(document.getElementById('password_imput').value),
                 message_data: JSON.stringify(canvasURI)
                 }, function(response){
+                    window.open(response);
                     //https://stackoverflow.com/questions/31444211/fabric-js-load-image-from-data-uri-coming-from-another-url
-                    var img = new Image();
-                    img.src = response;
-                    img.onload = function () {
-                        document.getElementById('txtImgSize').value='Image Encoded';
-                        if (img.width > img.height){
-                            const scaleFactor = canvas.width/img.width;
-                        } else {
-                            const scaleFactor = canvas.height/img.height;
-                        }
-                        var imgbase64 = new fabric.Image(img, {
-                            scaleX: scaleFactor,
-                            scaleY: scaleFactor
-                        })
-                        canvas.remove(textbox);
-                        canvas.remove(rect);
-                        canvas.add(imgbase64);
-                        canvas.renderAll();
-                    }
+                    // var img = new Image();
+                    // img.src = response;
+                    // img.onload = function () {
+                    //     document.getElementById('txtImgSize').value='Image Encoded';
+                    //     if (img.width > img.height){
+                    //         const scaleFactor = canvas.width/img.width;
+                    //     } else {
+                    //         const scaleFactor = canvas.height/img.height;
+                    //     }
+                    //     var imgbase64 = new fabric.Image(img, {
+                    //         scaleX: scaleFactor,
+                    //         scaleY: scaleFactor
+                    //     })
+                    //     canvas.remove(textbox);
+                    //     canvas.remove(rect);
+                    //     canvas.add(imgbase64);
+                    //     canvas.renderAll();
+                    // }
                 }
             )
+        };
+
+        document.querySelector('#saveButn').onclick = function(){
+            //this will allow the user to view the image, but it will be scaled to the canvas size... 
+            window.open(canvas.toDataURL('png'));
+            // alert('clicked save')
+            // document.href = canvas.toDataURL({
+            //     format: 'png'
+            // });
+            // document.download = 'canvas.png'
         };
 
     </script>
