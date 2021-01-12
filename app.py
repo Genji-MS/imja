@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for
-from PIL import Image, ImageDraw, ImageFont
-from base64 import b64encode
+from flask import Flask, render_template, request, jsonify
+from PIL import Image, ImageDraw
+from base64 import b64encode, b64decode
 from hashlib import sha512
 from io import BytesIO
 import re
@@ -20,12 +20,12 @@ whites_dict = {
 }
 
 @app.route('/')
-def index_encode(uri = "/static/Imja.png", msg = "", file = "", bounds = [0,0]):
+def index_encode(uri = "/Imja.png", msg = ""):
     # TODO: random password generator from brute force library
-    return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
+    return render_template('encode.html', uri=uri, msg=msg)
 
 @app.route('/imja')
-def index_decode(uri = "/static/Imja.png", msg = ""):
+def index_decode(uri = "/Imja.png", msg = ""):
     return render_template('decode.html', uri=uri, msg=msg)
 
 @app.route('/heroku', methods=['POST'])
@@ -104,25 +104,63 @@ def HerokuEncode():
     uri = f'data:{mime};base64,{img_string}'
     return render_template('encode.html', uri= uri, msg=msg)
 
+@app.route('/encodeJS', methods=['POST'])
+def image_encode_JS():
+    msg = ""
+    image = request.form['image_data']
+    password = request.form['password_data']
+    message = request.form['message_data']
+
+    #print(f'image pulled: {image}\npassword_pulled: {password}\nmessage pulled: {message}')
+    Pattern(HashWord(password.encode()))
+
+    #u_image = b64decode(str(image))
+    #t_image = b64decode(str(message))
+
+    '''WARNING, Do not Regex an image URI, for some reason it will crash!!!!
+    regex = r'(.+,)|(")'
+    subst = ""
+    u_image = re.sub(regex, subst, image, 0)'''
+    #Remove the base64 header and trailing "
+    u_image = image[23:-1]
+    t_image = message[23:-1]
+
+    u_image = b64decode(u_image)
+    filename = 'user_image.png'  # I assume you have a way of picking unique filenames
+    with open(filename, 'wb') as f: #"w"rite and "b"inary
+        f.write(u_image)
+    t_image = b64decode(t_image)
+    filename = 'text_image.png'  # I assume you have a way of picking unique filenames
+    with open(filename, 'wb') as f: #"w"rite and "b"inary
+        f.write(t_image)
+    o_image = Encode('user_image.png','text_image.png')
+
+    img_byte_arr = BytesIO()
+    o_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = b64encode(img_byte_arr.getvalue())
+
+    img_string = str(img_byte_arr)
+    regex = r"(b')|(')"
+    subst = ""
+    img_string = re.sub(regex, subst, img_string, 0)
+
+    mime = "image/png"
+    uri = f'data:{mime};base64,{img_string}'
+
+    return jsonify(uri)
+
 @app.route('/encode', methods=['POST'])
 def image_encode():
     msg = ""
     #Check for file, if no > reload the page + warning
-    file = image = request.files['image']  
-    if file == "" or file == None:
-        uri = "/static/Imja.png"
+    image = request.files['image']  
+    if image == "" or image == None:
         msg += f'  WARNING! No image selected.'
-        bounds = [0,0]
-        return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
+        uri= "/Imja.png"
+        return render_template('encode.html', uri=uri, msg=msg)
     #Check for message, if no > reload the page with the image dimensions to write message
-    message = request.form.get('message')
-    if message == "" or message == None:
-        uri = ""
-        input_image = Image.open(image) 
-        x_size, y_size = input_image.size
-        bounds = [x_size,y_size]
-        return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
-        #msg += f'  ATTENTION! No message written!'
+    #Message will be broght in as base64image data, not as text
+    #message = request.form.get('message')
     #Check for PW, if no > add warning, but process still works
     password = request.form.get('password')
     if password == "":
@@ -132,9 +170,11 @@ def image_encode():
 
     #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
     Pattern(HashWord(password.encode()))
-    t_image, error = DrawText(image, message)
+
+    '''TODO convert base64 URI into image data'''
+    t_image =""  #= imageURI
+
     #append to the error messages
-    msg += error
     o_image = Encode(image, t_image)
 
     img_byte_arr = BytesIO()
@@ -149,9 +189,7 @@ def image_encode():
     mime = "image/png"
     uri = f'data:{mime};base64,{img_string}'
 
-    bounds = [0,0]
-
-    return render_template('encode.html', uri=uri, msg=msg, file=file, bounds=bounds)
+    return render_template('encode.html', uri=uri, msg=msg)
 
 @app.route('/decode', methods=['POST'])
 def image_decode():
@@ -197,54 +235,19 @@ def Pattern(hashedWords):
         #print(f'i:{i}  R:{R} G:{G} B:{B}')
     #return pattern #global variable
 
-def DrawText(image, message):
-    input_image = Image.open(image)
-    text_image = Image.new('L', input_image.size, color = (0))
-
-    x_size, y_size = input_image.size
-
-    '''
-    each character is appx:
-    7 pixels in length. as 62 char in an image width of 435 fit perfectly.
-    13 pixels in height. as 20 lines in an image height of 276 fit perfectly with no black space following.
-    '''
-    #constants to calculate number of characters that will fit within the image, and where line breaks will be inserted
-    _N = int(x_size/7) #characters before new line is inserted
-    _E = int(y_size/13) #vertical limit of characters
-    text_length = len(message)
-    msg = ""
-    if (_N*_E) < text_length:
-        msg =f'  ALERT!!! The message({text_length}) was too long to fit within the image area({_N*_E}). Use a bigger image, or a smaller message'
-    text_lines = 0 #vertical lines of text
-    while text_length - _N*text_lines > _N:
-        #increment text_lines aka lines of vertical text
-        text_lines+=1
-        #calculate where we insert the linebreak (max_characters_per_line * lines + #_of_line_breaks(invisible characters that add to the index length))
-        newLine_index = _N*text_lines+(1*(text_lines-1))
-        #add line break by making a new string
-        add_line = message[:newLine_index]+'\n'+message[newLine_index:]
-        #strings are immutable in Python, so we re-write the new text back into our variable
-        message = add_line
-        #recalculate the length of our text MINUS 2 characters that denote each new line
-        text_length = len(message)-(text_lines*2)
-        #12345678901234567890
-        #1 3 5 7 90 2 4 6 8 0
-
-    text_font = ImageFont.truetype('/assets/fonts/Courier.dfont', 12)
-    text_draw = ImageDraw.Draw(text_image)
-    text_draw.text((0,0), message, font=text_font, fill=(255))
-    
-    #text_image.save(f'./text/{filename}.png')
-    return text_image, msg
-
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0
+    #image = Image.open(BytesIO(image))
     input_image = Image.open(image)
     #print(f'opened as {input_image.mode}')
     if input_image.mode == 'RGBA':
         input_image = input_image.convert('RGB')
         #print(f'converted to ‘{input_image.mode}')
-    text_image = t_image #Image.open(f'./text/{filename}.png')
+
+    #text_image = Image.open(BytesIO(t_image))
+    text_image = Image.open(t_image) #text_image = t_image #Image.open(f'./text/{filename}.png')
+    #Convert text image to Greyscale, as it will import as RGBA
+    text_image = input_image.convert('L')
 
     # Create a new PIL image with the same size as the encoded image:
     output_image = Image.new("RGB", input_image.size)
@@ -286,20 +289,16 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
                 b = (b & 252) | pattern[index][2]
                 #print (f'r:{r} g:{g} b:{b}')
                 #set shade of white, check color of white pixel and store that info to the closest of 8 shades of white
-                print (textPixel[x])
+                #print (textPixel[x])
                 for w in range(0,8,1):
                     if textPixel[x] <= whites[w]:
-                        print(w)
+                        #print(w)
                         r += whites_dict[w][0]
                         g += whites_dict[w][1]
                         b += whites_dict[w][2]
                         break
             else:
                 #if text black ensure not of pattern, do NOT modify the image to be of (text)black color! 
-
-                #old versions of if statement, reference for working with the .endswith method
-                #(red ONLY) f'{color:0b}'.endswith( str( pattern[:-1] ) ):
-                #f'{r}'.endswith(f'{bin(pattern[index][0])[-1]}'):
 
                 #print (f'a:{(r & 2)} b:{pattern[index][0]} ={(r & 2) == pattern[index][0]}')
                 #bugs were present with (r & 2)... and trailing in-line comments even though the print above works
@@ -319,7 +318,6 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         if index >= 64:
             index = 0
     
-    #output_image.save(f'./output/{filename}.png')
     return output_image
 
 def Decode(image):

@@ -22,19 +22,13 @@
         </div>
         <div class="row" style="border:none; background:rgb(255,255,255);">
             <div class="content">
-                <form action="/encode" method="POST" enctype="multipart/form-data">
-                    <br>
-                    <input type="file" id="imgLoader" name="image" accept=".png" class="form-control-file" aria-describedby="fileHelp">
-                    <small id="fileHelp" class="form-text text-muted">Upload an image to encode your secret image into</small>
-                    <input class="form-control form-control-sm" type="text" name="password" placeholder="create password" id="inputSmall">
-
-                    <textarea class="form-control" type="text" rows="3" name="message" spellcheck="false" placeholder="secret message"></textarea>
-                    <input type="text" id="txtImgSize" readonly="readonly">
-                    <canvas id="textCanvas" width='500' height='500'></canvas>
-
-                    <button type="Submit" class="btn btn-primary btn-lg">Encode Image</button>
-                    <input id="butn" type="button" value="Encode Message" />
-                </form>
+                <br>
+                <input type="file" id="imgLoader" name="image" accept=".png" class="form-control-file" aria-describedby="fileHelp">
+                <input class="form-control form-control-sm" id="password_imput" type="text" name="password" placeholder="create password">
+                <!-- <textarea class="form-control" type="text" rows="3" name="message" spellcheck="false" placeholder="secret message"></textarea> -->
+                <input type="text" id="txtImgSize" readonly="readonly">
+                <canvas id="textCanvas" width='500' height='500'></canvas>
+                <button type="button" id="butn" value="Canvas to URI" class="btn btn-primary btn-lg">Encode Image URI</button>                
             </div>
         </div>
         <div class="row" style="border:none; background:rgb(255,255,255);">  
@@ -46,6 +40,12 @@
     </div>
     <script>
         var canvas = new fabric.Canvas('textCanvas');
+
+        window.scaleFactor = 1;
+        window.image ='';
+        window.password = '';
+        // bool not needed currently until componets to display image are resolved
+        //window.showImg = true;
 
         var rect = new fabric.Rect({
             left:0,
@@ -67,47 +67,98 @@
         canvas.add(textbox).setActiveObject(textbox);
         textbox.set({fill: '#FFF'})
         
+        // Doesn't scale image properly. Also, text box needs to be set to white
+        // var imja = new Image();
+        //     imja.src = response;
+        //     fabric.Image.fromURL('/Imja.png', function(image){
+        //     img.onload = function () {
+        //         document.getElementById('txtImgSize').value='Image Encoding Complete';
+        //         const scaleFactor = canvas.width/img.width;                    
+        //         var imgbase64 = new fabric.Image(img, {
+
+        //     fabric.Image.fromURL('/Imja.png', function(imja){
+        //     const scaleFactor = canvas.width/img.width;
+        //     imja.scaleX = scaleFactor
+        //     imja.scaleY = scaleFactor
+        //     canvas.add(imja);
+        // });
+        
         // https://stackoverflow.com/questions/21715812/how-to-upload-an-image-to-a-canvas-with-fabric-js
         document.getElementById('imgLoader').onchange = function handleImage(e) {
         var reader = new FileReader();
             reader.onload = function (event){
+                // Cannot find object 'img'
+                // if (window.showImg == true){
+                //     window.showImg = false;
+                //     canvas.remove(img);
+                // }
                 var imgObj = new Image();
                 imgObj.src = event.target.result;
+                window.image = event.target.result;
                 imgObj.onload = function () {
                     var image = new fabric.Image(imgObj);
-                    // image.set({
-                    //     angle: 0,
-                    //     padding: 0,
-                    //     cornersize: 0,
-                    //     height:110,
-                    //     width:110,
-                    // });
                     document.getElementById('txtImgSize').value='Size: '+image.width+' x '+image.height;
-
                     if (image.width > image.height){
-                        const scaleFactor = canvas.width/image.width;
+                        window.scaleFactor = canvas.width/image.width;
                         rect.set({width: canvas.width});
-                        rect.set({height: image.height * scaleFactor});
+                        rect.set({height: image.height * window.scaleFactor});
                     } else {
-                        const scaleFactor = canvas.height/image.height;
+                        window.scaleFactor = canvas.height/image.height;
                         rect.set({height: canvas.height});
-                        rect.set({width: image.width * scaleFactor});
+                        rect.set({width: image.width * window.scaleFactor});
                     }
+                    //make our textbox smaller then the rect
                     textbox.set({width: rect.width-10});
                 // canvas.centerObject(image);
-                // canvas.add(image);
                 canvas.renderAll();
-                }
+                }   
             }
             reader.readAsDataURL(e.target.files[0]);
         }
 
-        //How to save
-        // $("#butn").click(function(){
-        //     $("#textCanvas").get(0).toBlob(function(blob){
-        //         saveAs(blob,"filename.png")
-        //     })
-        // })
+        document.querySelector('#butn').onclick = function(){
+            //convert background to black
+            rect.set({opacity:1});
+            canvas.renderAll();
+            const canvasURI = canvas.toDataURL({
+                format: 'png',
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                multiplier: 1/window.scaleFactor
+            });
+            //convert background back to opaque
+            rect.set({opacity:0.7});
+            canvas.renderAll();
+            //https://flask.programmingpedia.net/en/knowledge-base/17171459/flask--render-a-page-after-jquery-ajax---post-call
+            $.post( '/encodeJS', {
+                image_data: JSON.stringify(window.image),
+                password_data: JSON.stringify(document.getElementById('password_imput').value),
+                message_data: JSON.stringify(canvasURI)
+                }, function(response){
+                    //https://stackoverflow.com/questions/31444211/fabric-js-load-image-from-data-uri-coming-from-another-url
+                    var img = new Image();
+                    img.src = response;
+                    img.onload = function () {
+                        document.getElementById('txtImgSize').value='Image Encoded';
+                        if (img.width > img.height){
+                            const scaleFactor = canvas.width/img.width;
+                        } else {
+                            const scaleFactor = canvas.height/img.height;
+                        }
+                        var imgbase64 = new fabric.Image(img, {
+                            scaleX: scaleFactor,
+                            scaleY: scaleFactor
+                        })
+                        canvas.remove(textbox);
+                        canvas.remove(rect);
+                        canvas.add(imgbase64);
+                        canvas.renderAll();
+                    }
+                }
+            )
+        };
 
     </script>
 {% endblock %}
