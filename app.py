@@ -107,7 +107,7 @@ def HerokuEncode():
 @app.route('/encodeJS', methods=['POST'])
 def image_encode_JS():
     image = request.form['image_data']
-    password = request.form['password_data']
+    password = request.form['password_data'][1:-1] #Trim the first and last characters of ' " " '
     message = request.form['message_data']
     #print(f'image pulled: {image}\npassword_pulled: {password}\nmessage pulled: {message}')
     Pattern(HashWord(password.encode()))
@@ -195,11 +195,10 @@ def image_decode():
     password = request.form.get('password')
     image = request.files['image']
     msg = ""
-    
+    print(f'password_pulled: {password}')
     #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
 
     #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
-    #
     Pattern(HashWord(password.encode()))
     o_image = Decode(image)
 
@@ -224,6 +223,7 @@ def HashWord(words):
 
 def Pattern(hashedWords):
     #convert the hash into sequence of digits 0-7
+    pattern.clear() #If the variable isn't cleared it will continue to stack values from previous entries
     for num in hashedWords:
         i = int(num,16)%8 #Hex2Int(num)
         #break hex into individual channels, search for match in the 2nd bit
@@ -314,7 +314,7 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         #increase index, and repeat over our pattern
         index += 1
         # prevously was 32, because that is the length of sha512/2 as we combined every other hex
-        if index >= 64:
+        if index >= 128:
             index = 0
     
     return output_image
@@ -348,7 +348,7 @@ def Decode(image):
             decoded_image.putpixel((pixelX,pixelY), (color))#(b,g,r))
 
         index += 1
-        if index >= 64: #32
+        if index >= 128: #32
             index = 0
     
     #decoded_image.save(f'./decode/{filename}.png')
