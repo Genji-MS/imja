@@ -1,4 +1,4 @@
-![Logo of the project](https://github.com/Genji-MS/imja/blob/main/static/Imja.png)
+![Logo of the project](https://github.com/Genji-MS/imja/blob/main/assets/Imja.png)
 
 # IMJA
 
