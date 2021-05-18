@@ -29,7 +29,7 @@
                 <input type="text" id="txtImgSize" readonly="readonly">
                 <canvas id="textCanvas" width='500' height='500'></canvas>
                 <button type="button" id="butn" value="Canvas to URI" class="btn btn-primary btn-lg">Encode Image URI</button>                
-                <button type="button" id="saveButn" value="Blob to File" class="btn btn-primary btn-lg">Save to File</button>                
+                <button type="button" id="saveButn" value="Blob to File" class="btn btn-primary btn-lg">Open File in New Tab</button>                
             </div>
         </div>
         <div class="row" style="border:none; background:rgb(255,255,255);">  
@@ -47,6 +47,10 @@
         window.password = '';
         // bool not needed currently until componets to display image are resolved
         window.showImg = true;
+        window.URI ='';
+
+        var saveButn = document.getElementById("saveButn");
+        saveButn.disabled = true;
 
         var rect = new fabric.Rect({
             left:0,
@@ -83,6 +87,7 @@
         
         // https://stackoverflow.com/questions/21715812/how-to-upload-an-image-to-a-canvas-with-fabric-js
         document.getElementById('imgLoader').onchange = function handleImage(e) {
+        saveButn.disabled = true;
         var reader = new FileReader();
             reader.onload = function (event){
                 //Cannot find object 'imja'
@@ -139,38 +144,49 @@
                 password_data: JSON.stringify(document.getElementById('password_imput').value),
                 message_data: JSON.stringify(canvasURI)
                 }, function(response){
-                    window.open(response);
+                    window.URI = response;
+                    saveButn.disabled = false;
+                    //window.open(response); //opens URI data in a new tab for saving
                     //https://stackoverflow.com/questions/31444211/fabric-js-load-image-from-data-uri-coming-from-another-url
-                    // var img = new Image();
-                    // img.src = response;
-                    // img.onload = function () {
-                    //     document.getElementById('txtImgSize').value='Image Encoded';
-                    //     if (img.width > img.height){
-                    //         const scaleFactor = canvas.width/img.width;
-                    //     } else {
-                    //         const scaleFactor = canvas.height/img.height;
-                    //     }
-                    //     var imgbase64 = new fabric.Image(img, {
-                    //         scaleX: scaleFactor,
-                    //         scaleY: scaleFactor
-                    //     })
-                    //     canvas.remove(textbox);
-                    //     canvas.remove(rect);
-                    //     canvas.add(imgbase64);
-                    //     canvas.renderAll();
-                    // }
+                    var img = new Image();
+                    img.src = response;
+                    img.onload = function () {
+                        document.getElementById('txtImgSize').value='Image Encoded';
+                        if (img.width > img.height){
+                            const scaleFactor = canvas.width/img.width;
+                        } else {
+                            const scaleFactor = canvas.height/img.height;
+                        }
+                        var imgbase64 = new fabric.Image(img, {
+                            scaleX: scaleFactor,
+                            scaleY: scaleFactor
+                        })
+                        canvas.remove(textbox);
+                        canvas.remove(rect);
+                        canvas.add(imgbase64);
+                        canvas.renderAll();
+                    }
                 }
             )
         };
 
         document.querySelector('#saveButn').onclick = function(){
             //this will allow the user to view the image, but it will be scaled to the canvas size... 
-            window.open(canvas.toDataURL('png'));
+            //window.open(canvas.toDataURL('png')); //saves by opening into another tab.
+
             // alert('clicked save')
+            // doesn't do anything when clicked
             // document.href = canvas.toDataURL({
             //     format: 'png'
             // });
             // document.download = 'canvas.png'
+
+            //attemps to save URI as a file, doesn't throw error, but doesn't work as above
+            // document.href = window.URI.toDataURL({
+            //     format: 'png'
+            // }) 
+            // document.download = 'canvas.png'
+            window.open(window.URI);
         };
 
     </script>

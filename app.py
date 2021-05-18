@@ -28,82 +28,6 @@ def index_encode(uri = "/Imja.png", msg = ""):
 def index_decode(uri = "/Imja.png", msg = ""):
     return render_template('decode.html', uri=uri, msg=msg)
 
-@app.route('/heroku', methods=['POST'])
-def HerokuEncode():
-    """This function does everything in one go in an attempt to avoid consecutive file.open(file) issues with Heroku"""
-    msg = ""
-    password = request.form.get('password')
-    if password == "":
-        msg += f'  WARNING! No password provided.'
-    message = request.form.get('message')
-    if message == "" or message == None:
-        msg += f'  ATTENTION! No message written!'
-    image = request.files['image']    
-    Pattern(HashWord(password.encode()))
-
-    input_image = Image.open(image)
-    if input_image.mode == 'RGBA':
-        input_image = input_image.convert('RGB')
-    text_image = Image.new('L', input_image.size, color = (0))
-    x_size, y_size = input_image.size
-    _N = int(x_size/7) #characters before new line is inserted
-    _E = int(y_size/13) #vertical limit of characters
-    text_length = len(message)
-    if (_N*_E) < text_length:
-        msg =f'  ALERT!!! The message({text_length}) was too long to fit within the image area({_N*_E}). Use a bigger image, or a smaller message'
-    text_lines = 0 #vertical lines of text
-    while text_length - _N*text_lines > _N:
-        text_lines+=1
-        newLine_index = _N*text_lines+(1*(text_lines-1))
-        add_line = message[:newLine_index]+'\n'+message[newLine_index:]
-        message = add_line
-        text_length = len(message)-(text_lines*2)
-    #HEROKU friendly path
-
-    #CUSTOM FONT is disabled as it throws 'ImportError: The _imagingft C module is not installed' in docker
-    #text_font = ImageFont.truetype('/app/assets/fonts/Courier.dfont', 12)
-    text_draw = ImageDraw.Draw(text_image)
-    #text_draw.text((0,0), message, font=text_font, fill=(255))
-    text_draw.text((0,0), message, fill=(255))
- 
-    index = 0 #32
-    output_image = Image.new("RGB", input_image.size)
-    tx_size, ty_size = text_image.size
-    y_offset = int((y_size - ty_size) * 0.5)
-    x_offset = int((x_size - tx_size) * 0.5)
-    for i, pixel in enumerate(input_image.getdata()):
-        textPixel = text_image.getdata()
-        pixelX = i % x_size
-        pixelY = int(i / x_size)
-        (b,g,r) = pixel
-        if pixelX >= x_offset and pixelX < (tx_size + x_offset) and pixelY >= y_offset and pixelY < (ty_size+y_offset):
-            x = (pixelY - y_offset) * tx_size + (pixelX - x_offset)
-            if textPixel[x] != 0:
-                r = (r & 248) | pattern[index][0]
-                g = (g & 248) | pattern[index][1]
-                b = (b & 248) | pattern[index][2]
-            else:
-                if f'{r:0b}'.endswith(f'{bin(pattern[index][0])[-1]}'):
-                    if r < 255:
-                        r +=1
-                    else :
-                        r -=1      
-        output_image.putpixel((pixelX, pixelY), (b,g,r))
-        index += 1
-        if index >= 32:
-            index = 0
-    
-    img_byte_arr = BytesIO()
-    output_image.save(img_byte_arr, format='PNG')
-    img_byte_arr = b64encode(img_byte_arr.getvalue())
-    img_string = str(img_byte_arr)
-    regex = r"(b')|(')"
-    subst = ""
-    img_string = re.sub(regex, subst, img_string, 0)
-    mime = "image/png"
-    uri = f'data:{mime};base64,{img_string}'
-    return render_template('encode.html', uri= uri, msg=msg)
-
 @app.route('/encodeJS', methods=['POST'])
 def image_encode_JS():
     image = request.form['image_data']
@@ -147,48 +71,6 @@ def image_encode_JS():
     uri = f'data:{mime};base64,{img_string}'
 
     return jsonify(uri)
-
-@app.route('/encode', methods=['POST'])
-def image_encode():
-    msg = ""
-    #Check for file, if no > reload the page + warning
-    image = request.files['image']  
-    if image == "" or image == None:
-        msg += f'  WARNING! No image selected.'
-        uri= "/Imja.png"
-        return render_template('encode.html', uri=uri, msg=msg)
-    #Check for message, if no > reload the page with the image dimensions to write message
-    #Message will be broght in as base64image data, not as text
-    #message = request.form.get('message')
-    #Check for PW, if no > add warning, but process still works
-    password = request.form.get('password')
-    if password == "":
-        msg += f'  WARNING! No password provided.'
-
-    #DEV: Open image data is scoped. Opening it here doesn't make it available to child functions
-
-    #covert password into bytes > Hashword(bytes) returns SHA512 > Pattern(SHA512) to create list that we use to encode our image pixel by pixel
-    Pattern(HashWord(password.encode()))
-
-    '''TODO convert base64 URI into image data'''
-    t_image =""  #= imageURI
-
-    #append to the error messages
-    o_image = Encode(image, t_image)
-
-    img_byte_arr = BytesIO()
-    o_image.save(img_byte_arr, format='PNG')
-    img_byte_arr = b64encode(img_byte_arr.getvalue())
-
-    img_string = str(img_byte_arr)
-    regex = r"(b')|(')"
-    subst = ""
-    img_string = re.sub(regex, subst, img_string, 0)
-
-    mime = "image/png"
-    uri = f'data:{mime};base64,{img_string}'
-
-    return render_template('encode.html', uri=uri, msg=msg)
 
 @app.route('/decode', methods=['POST'])
 def image_decode():
@@ -236,12 +118,12 @@ def Pattern(hashedWords):
 
 def Encode(image, t_image): #Does the text_image data get stored in the global? or do we need to pass that info
     index = 0
-    input_image = Image.open(BytesIO(image))
+    #assume to convert as images of type 'P'alleted can be written as type .png, but contain 1 color channel
+    #https://stackoverflow.com/questions/52307290/what-is-the-difference-between-images-in-p-and-l-mode-in-pil
+    input_image = Image.open(BytesIO(image)).convert('RGB')
     #input_image = Image.open(image)
+    #print(f'mime type: {input_image.get_format_mimetype()})
     #print(f'opened as {input_image.mode}')
-    if input_image.mode == 'RGBA':
-        input_image = input_image.convert('RGB')
-        #print(f'converted to ‘{input_image.mode}')
 
     text_image = Image.open(BytesIO(t_image))
     #text_image = Image.open(t_image) #text_image = t_image #Image.open(f'./text/{filename}.png')
@@ -264,7 +146,8 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
         pixelY = int(i / x_size)
         #Images are encoded backwards, we want to split accordingly
         #get colors of image
-        #print (pixel)
+        if i == 0:
+            print (pixel)
         (b,g,r) = pixel
         #center text into image with offset
         if pixelX >= x_offset and pixelX < (tx_size + x_offset) and pixelY >= y_offset and pixelY < (ty_size+y_offset):
@@ -321,11 +204,9 @@ def Encode(image, t_image): #Does the text_image data get stored in the global? 
 
 def Decode(image):
     index = 0
-    input_image = Image.open(image)
-    print(f'opened as {input_image.mode}')
-    if input_image.mode == 'RGBA':
-        input_image = input_image.convert('RGB')
-        #print(f'converted to ‘{input_image.mode}')
+    #to prevent errors from users importing images of single channel
+    input_image = Image.open(image).convert('RGB')
+    # print(f'opened as {input_image.mode}')
 
     # Create a new PIL image with the same size as the encoded image:
     decoded_image = Image.new("L", input_image.size)
