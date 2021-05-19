@@ -4,7 +4,13 @@
 
 > Stegonagraphy - encrypting a hidden text message in an image
 
-Using a SHA512 hash, Imja (IMage ninJA) will encode a secret message across the ~~three~~ two least significant bits of an images 'RGB' color channels, pixel by pixel. Only by entering the same 'password' can the same SHA512 be generated to decode the image.
+Using a SHA512 hash, Imja (IMage ninJA) will encode a secret message across the ~~three~~ two least significant bits of an images 'RGB' color channels, pixel by pixel. 
+
+After modifying an image with your hidden message, the image is returned to the user, visibly unchanged. 
+
+Send your modified image to a friend. Only by entering the same 'password' can the hidden message be revealed.
+
+Use IMJA to hide copyright information. Or to send Memes with secret plans!
 
 
 ## Version History:
@@ -25,7 +31,7 @@ Using a SHA512 hash, Imja (IMage ninJA) will encode a secret message across the 
     - Dockerized deployment taken offline as version was outdated
 
 - V1.2
-    - Dockeized and Deployed
+    - Dockerized and Deployed
 
 - V1.1
     - Restructured files/folders to deploy on Heroku
